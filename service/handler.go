@@ -2,14 +2,13 @@ package service
 
 import (
 	"fmt"
+	"github.com/GrokkingSystemDesign/shortURL/dao"
+	"github.com/GrokkingSystemDesign/snowflake"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/url"
 	"runtime/debug"
 	"strings"
-	"sync"
-
-	"github.com/GrokkingSystemDesign/snowflake"
-	"github.com/gin-gonic/gin"
 )
 
 func init() {
@@ -21,7 +20,6 @@ func init() {
 }
 
 var (
-	storage sync.Map
 	machine *snowflake.Machine
 )
 
@@ -58,17 +56,21 @@ func HandleURLShorten(c *gin.Context) {
 		return
 	}
 	shortURL := encodeURL(body.Long)
-	storage.Store(shortURL, body.Long)
-	c.String(http.StatusOK, fmt.Sprintf("http://localhost:8080/%s", shortURL))
+	_, err := dao.InsertData(c, &dao.URLData{Did: shortURL, Value: body.Long})
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+	} else {
+		c.String(http.StatusOK, fmt.Sprintf("http://localhost:8080/%s", shortURL))
+	}
 }
 
 // HandleRedirect retrieves related long URL and redirect
 func HandleRedirect(c *gin.Context) {
 	shortURL := c.Param("url")
-	longURL, ok := storage.Load(shortURL)
-	if !ok {
+	longURL, err := dao.GetData(c, shortURL)
+	if err != nil {
 		c.String(http.StatusNotFound, "short url missing in storage")
 		return
 	}
-	c.Redirect(http.StatusPermanentRedirect, longURL.(string))
+	c.Redirect(http.StatusPermanentRedirect, longURL)
 }

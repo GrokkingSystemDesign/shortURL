@@ -1,0 +1,6 @@
+db:
+  mysql:
+    config:
+      dsn: root:root123456@tcp(127.0.0.1:3306)/db_config_test?charset=utf8mb4
+
+load_db_interval: 12000 # 从db加载配置的间隔，秒
